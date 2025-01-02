@@ -17,24 +17,25 @@ import { getConstantData } from "../utils/constants.js";
 
 const autoFillController = async (req, res) => {
   try {
-    const { fname, lname, imageUrl } = req.body;
+    const { fname, lname, main_image } = req.body;
     const { designId } = req.params;
 
     // Check if all required fields are present
-    if (!fname || !lname || !imageUrl) {
-      throw new ApiError(400, "fname, lname, and imageUrl are required");
+    if (!fname || !lname || !main_image) {
+      throw new ApiError(400, "fname, lname, and main_image are required");
     }
 
     if (!designId) {
       throw new ApiError(400, "Design id is required");
     }
 
-    // upload image to Canva
-    const uploadId = await createAssetUploadJob(imageUrl);
+    // upload images to Canva
+
+    const uploadId = await createAssetUploadJob(main_image);
     const assetId = await getAssetUploadJob(uploadId);
 
     // Get data using constants
-    const constantDataArr = getConstantData(fname, lname, imageUrl);
+    const constantDataArr = getConstantData(fname, lname, main_image);
     constantDataArr["main_image"] = {
       type: "image",
       asset_id: assetId,
@@ -71,10 +72,12 @@ const autoFillController = async (req, res) => {
     }
 
     const downloadPath = await downloadPDF(exportJob);
-    // Send success response
-    return ApiResponse.success(res, 200, "Job completed successfully", );
+    return ApiResponse.success(
+      res,
+      200,
+      `Job completed successfully ${downloadPath}`,
+    );
   } catch (error) {
-    // Handle any errors
     return ApiResponse.error(
       res,
       error.message || "An unexpected error occurred",
@@ -84,72 +87,3 @@ const autoFillController = async (req, res) => {
 };
 
 export { autoFillController };
-
-// const autoFillController = async (req, res) => {
-//   try {
-//     const { fname, lname, imageUrl } = req.body;
-//     const { designId } = req.params;
-
-//     if (!fname || !lname || !imageUrl) {
-//       throw new ApiError(400, "fname, lname, and imageUrl are required");
-//     }
-
-//     if (!designId) {
-//       throw new ApiError(400, "Design id is required");
-//     }
-
-//     // Get data using constants
-//     const constantDataArr = getConstantData(fname, lname, imageUrl);
-
-//     // Create autofill job
-//     const jobId = await createAutoFillJob(designId, constantDataArr);
-
-//     if (!jobId) {
-//       throw new ApiError(400, "Failed to create autofill job");
-//     }
-
-//     // Check job status
-//     let customDesignId = await getAutoFillJobStatus(jobId);
-
-//     // if (jobStatus === "completed") {
-//     //   return ApiResponse.success(res, 200, "Job completed successfully", {
-//     //     jobId,
-//     //   });
-//     // } else if (jobStatus === "in_progress") {
-//     //   // Retry the job status after a short delay
-//     //   setTimeout(async () => {
-//     //     job = await getAutoFillJobStatus(jobId);
-//     //     jobStatus = job?.status;
-//     //     if (jobStatus === "success") {
-//     //       return ApiResponse.success(res, 200, "Job completed successfully", {
-//     //         result: job?.result,
-//     //       });
-//     //     } else {
-//     //       return ApiResponse.success(res, 202, "Job still in progress", {
-//     //         jobId,
-//     //       });
-//     //     }
-//     //   }, 2000); // Retry after 2 seconds
-//     // } else {
-//     //   return ApiResponse.error(res, "Job failed or unknown status", 400);
-//     // }
-
-//     // create export job
-//     const exportJobId = await createDesignExport(customDesignId);
-//     if (!exportJobId) {
-//       throw new ApiError(400, "Failed to create export job");
-//     }
-//     const exportJob = await getAutoFillJobStatus(exportJobId);
-//     return ApiResponse.success(res, 200, "Job completed successfully", {
-//       jobId,
-//       exportJobId,
-//       exportJob,
-//     });
-//   } catch (error) {
-//     return ApiResponse.error(
-//       res,
-//       error.message || "An unexpected error occurred",
-//       error?.statusCode || 500,
-//     );
-//   }
-// };

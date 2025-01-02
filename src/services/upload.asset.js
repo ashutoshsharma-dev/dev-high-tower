@@ -11,7 +11,6 @@ const createAssetUploadJob = async (imageUrl) => {
   const tempFilePath = path.resolve(os.tmpdir(), `temp-image-${Date.now()}`); // Unique temp file name
 
   try {
-    // Download the image from the URL
     const response = await fetch(imageUrl);
     if (!response.ok) {
       throw new ApiError(
@@ -20,10 +19,8 @@ const createAssetUploadJob = async (imageUrl) => {
       );
     }
 
-    // Save the image to a temporary file
     await streamPipeline(response.body, fs.createWriteStream(tempFilePath));
 
-    // Get the size of the downloaded file
     const fileStats = fs.statSync(tempFilePath);
     const fileSize = fileStats.size;
 
@@ -31,7 +28,6 @@ const createAssetUploadJob = async (imageUrl) => {
       throw new ApiError(400, "Downloaded image is empty.");
     }
 
-    // Upload the file to Canva
     const uploadResponse = await fetch(
       "https://api.canva.com/rest/v1/asset-uploads",
       {
@@ -45,7 +41,7 @@ const createAssetUploadJob = async (imageUrl) => {
           "Content-Type": "application/octet-stream",
         },
         body: fs.createReadStream(tempFilePath),
-        duplex: "half", // Required for Node.js 18+ when streaming a body
+        duplex: "half", 
       },
     );
 
@@ -55,7 +51,6 @@ const createAssetUploadJob = async (imageUrl) => {
       throw new ApiError(uploadResponse.status || 500, errorMessage);
     }
 
-    // Handle upload response
     const uploadData = await uploadResponse.json();
     console.log("Upload response:", uploadData?.job?.id);
 
@@ -66,7 +61,7 @@ const createAssetUploadJob = async (imageUrl) => {
       ? error
       : new ApiError(500, `Failed to upload image: ${error.message}`);
   } finally {
-    // Clean up temporary file
+   
     try {
       if (fs.existsSync(tempFilePath)) {
         fs.unlinkSync(tempFilePath);
@@ -83,23 +78,21 @@ const getAssetUploadJob = async (jobId) => {
   try {
     let status = "in_progress";
     let assetId = null;
-    let attempts = 0; // To prevent infinite looping
-    const maxAttempts = 10; // Maximum number of polling attempts
-    const delay = 1000; // Delay between polling attempts (in milliseconds)
+    let attempts = 0;
+    const maxAttempts = 5;
+    const delay = 1000;
 
     while (status === "in_progress" && attempts < maxAttempts) {
-      // Fetch the asset upload job status
       const response = await fetch(
         `https://api.canva.com/rest/v1/asset-uploads/${jobId}`,
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${process.env.TOKEN}`, // Use environment variable for token
+            Authorization: `Bearer ${process.env.TOKEN}`,
           },
         },
       );
 
-      // Handle API response errors
       if (!response.ok) {
         throw new ApiError(
           response.status,
@@ -107,16 +100,15 @@ const getAssetUploadJob = async (jobId) => {
         );
       }
 
-      // Parse JSON response
       const data = await response.json();
       console.log("Asset upload job status response:", data);
 
       if (data && data.job) {
-        status = data.job.status; // Update the status
+        status = data.job.status;
         if (status === "success") {
-          assetId = data.job.asset.id; // Get the asset ID
+          assetId = data.job.asset.id;
           if (assetId) {
-            return assetId; // Return the asset ID once the job is complete
+            return assetId;
           } else {
             throw new ApiError(400, "Asset ID not found in the response");
           }
