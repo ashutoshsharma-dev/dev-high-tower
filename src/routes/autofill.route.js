@@ -3,6 +3,6 @@ import { autoFillController } from "../controllers/autofill.contoller.js";
 
 const autofillRouter = express.Router();
 
-autofillRouter.get("/autofill/:designId", autoFillController);
+autofillRouter.post("/autofill/:designId", autoFillController);
 
 export default autofillRouter;
